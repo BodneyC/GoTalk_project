@@ -11,7 +11,7 @@ INCOMING DATA FLOW:							OUTGOING DATA FLOW:
 	user.Write()
 		user.writer.WriteString(data)
 ---------------------------------------------------------------------------------------------*/
-package main
+package GoTalk_MAIN
 //----------------------------------------------------------------------------------------------
 import (
 	"fmt"
@@ -28,8 +28,8 @@ import (
 var (
 	connections []net.Conn
 	listener net.Listener
-	quit chan bool
 	room ServerRoom
+	port int
 	CONN_PROT = "tcp"
 	CONN_HOST = "localhost"
 )
@@ -58,6 +58,12 @@ func NewUser(id int, conn net.Conn) *UserInfo{
 	return newUser // Return to room.Join()
 }
 //----------------------------------------------------------------------------------------------
+func (user *UserInfo) Listen() {
+	// TODO: vvv
+	// go user.Read()
+	// go user.Write()
+}
+//----------------------------------------------------------------------------------------------
 type ServerRoom struct {
 	userTrack map[int]*UserInfo // Map for delete() (tracking UserInfo objects)
 	userID int // Tracking users, and used as key for delete()^
@@ -77,12 +83,6 @@ func NewRoom() *ServerRoom {
 	}
 	glog.Infoln("New room created")
 	return newroom
-}
-//----------------------------------------------------------------------------------------------
-func (user *UserInfo) Listen() {
-	// TODO: vvv
-	go user.Read()
-	go user.Write()
 }
 //----------------------------------------------------------------------------------------------
 func (room *ServerRoom) Join(conn net.Conn) {
@@ -105,7 +105,7 @@ func (room *ServerRoom) Join(conn net.Conn) {
 		for {
 			select {
 				// TODO case for killing functions
-			case input := <-user.incoming
+			case input := <-user.incoming:
 				// Links to room.Listen() and then room.Broadcast()
 				room.incoming <- input
 			}
@@ -135,9 +135,6 @@ func (room *ServerRoom) Listen() {
 }
 //----------------------------------------------------------------------------------------------
 func main() {
-	var port int
-	defer glog.Flush()
-
 	defer func() {
 		glog.Info("Closing listener safely")
 		for i, connection := range connections {
@@ -146,13 +143,14 @@ func main() {
 				connection.Close()
 			}
 		}
+		glog.Flush()
+		listener.Close()
 	}()
 
 	fmt.Println("Please enter port number to listen on:")
 	fmt.Scan(&port)
 
 	listener, er_lis := net.Listen(CONN_PROT, CONN_HOST + ":" + strconv.Itoa(port))
-	defer listener.Close()
 
 	if er_lis != nil {
 		glog.Fatalf("Fatal error in listener init (Port: %s)", strconv.Itoa(port))
@@ -178,7 +176,6 @@ func main() {
 		// 'connection' into 'room.entrance' causes 'Join' via 'Listen'
 		room.entrance <- connection
 	}
-
 }
 //----------------------------------------------------------------------------------------------
 // init() is ran before main()
@@ -187,9 +184,8 @@ func init() {
 	flag.Parse()
 	// Altering commandline arguments
 	flag.Lookup("log_dir").Value.Set(".\\logs")
-  flag.Lookup("alsologtostderr").Value.Set("true")
+	flag.Lookup("alsologtostderr").Value.Set("true")
 	//Potentially unneeded vv
 	connections = make([]net.Conn, 0, 10)
-	quit = make(chan bool)
 }
 //----------------------------------------------------------------------------------------------
