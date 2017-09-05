@@ -79,7 +79,7 @@ func (user *UserInfo) RemoveUser() {
 	user.writeBuf = nil
 	user.conn.Close() // Delete net.Conn for 'user'
 	user.killUserConnection <- true
-
+	glog.Infoln("User", user.userID, "removed from room")
 }
 //----------------------------------------------------------------------------------------------
 func (user *UserInfo) Write() {
@@ -109,6 +109,7 @@ func (user *UserInfo) Read() {
 				} else {
 					glog.Errorln("Reading failed (User: ", user.userID, ")")
 					time.Sleep(100 * time.Millisecond)
+					user.RemoveUser()
 				}
 			}
 			user.incoming <- input
@@ -182,7 +183,7 @@ func (room *ServerRoom) Listen() {
 		for {
 			select {
 			case input := <-room.incoming:
-				glog.Infoln("RECIEVED: " + input)
+				glog.Info("RECIEVED: " + input)
 				room.Broadcast(input)
 			case connIn := <-room.entrance:
 				glog.Infoln("New connection to join")
