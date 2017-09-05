@@ -1,8 +1,8 @@
 /*----------------------------------------------------------------------------------------------
 INCOMING DATA FLOW:							OUTGOING DATA FLOW:
-	user.Read()
-		user.incoming <- line
-	room.Join
+	user.Read()								// No need to cycle users so:
+		user.incoming <- line				user.Write()
+	room.Join									output := <-user.outgoing
 		room.incoming <- data
 	room.Listen()
 		room.Broadcast(data)
@@ -19,10 +19,11 @@ import (
 	"github.com/golang/glog"
 	"net"
 	"sync"
-	"bufio"
+	"bufio" //Read/Write buffers
 	"time"
 	"flag"
 	"os" //os.Exit
+	"io" //io.EOF (For user killing)
 )
 //----------------------------------------------------------------------------------------------
 var (
@@ -58,10 +59,45 @@ func NewUser(id int, conn net.Conn) *UserInfo{
 	return newUser // Return to room.Join()
 }
 //----------------------------------------------------------------------------------------------
+func (user *UserInfo) Write() {
+	for {
+		select {
+			// case for Killing channel
+		case output := <-user.outgoing:
+			user.writeBuf.Writer(output)
+			user.writeBuf.Flush()
+		}
+	}
+}
+//----------------------------------------------------------------------------------------------
+func (user *UserInfo) RemoveUser() {
+	
+}
+//----------------------------------------------------------------------------------------------
+func (user *UserInfo) Read() {
+	for {
+		select {
+			// case for killing channel
+		default: //'default' is non-blocking so it executed if the 'select' isn't present
+			// Return 'line' and error_MSG. Reads until delimiter '\n'
+			input, er_read :=user.readBuf.ReadString('\n')
+			if er_read != nil {
+				if err == io.EOF {
+					glog.Info("User ", user.userID, "left the room")
+					user.RemoveUser()
+				} else {
+					glog.Errorln("Reading failed (User: ", user.userID, ")")
+					time.Sleep(100 * time.Millisecond)
+				}
+			}
+			user.incoming <- input
+		}
+	}
+}
+//----------------------------------------------------------------------------------------------
 func (user *UserInfo) Listen() {
-	// TODO: vvv
-	// go user.Read()
-	// go user.Write()
+	go user.Read()
+	go user.Write()
 }
 //----------------------------------------------------------------------------------------------
 type ServerRoom struct {
