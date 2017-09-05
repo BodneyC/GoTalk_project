@@ -11,7 +11,7 @@ INCOMING DATA FLOW:							OUTGOING DATA FLOW:
 	user.Write()
 		user.writer.WriteString(data)
 ---------------------------------------------------------------------------------------------*/
-package GoTalk_MAIN
+package main // Executables must always be called 'main'
 //----------------------------------------------------------------------------------------------
 import (
 	"fmt"
@@ -36,54 +36,75 @@ var (
 )
 //----------------------------------------------------------------------------------------------
 type UserInfo struct {
+	room *ServerRoom
 	userID int
+	conn net.Conn
 	incoming chan string
 	outgoing chan string
 	readBuf *bufio.Reader
 	writeBuf *bufio.Writer
+	killUserConnection chan bool
 	userMutex sync.Mutex
 }
 //----------------------------------------------------------------------------------------------
-func NewUser(id int, conn net.Conn) *UserInfo{
+func NewUser(id int, room *ServerRoom, conn net.Conn) *UserInfo{
 	readBuf := bufio.NewReader(conn)
 	writeBuf := bufio.NewWriter(conn)
 
 	newUser := &UserInfo{
-		userID: id,
+		room: room, // Needed for deletion of 'user' in 'room'...
+		userID: id, // ...indexed by id
+		conn: conn,
 		incoming: make(chan string),
 		outgoing: make(chan string),
 		readBuf: readBuf,
 		writeBuf: writeBuf,
+		killUserConnection: make(chan bool),
 	}
 	glog.Infoln("User added, ID: ", id)
 	return newUser // Return to room.Join()
 }
 //----------------------------------------------------------------------------------------------
+func (user *UserInfo) RemoveUser() {
+	// Handling of 'user' within 'room'
+	room := *user.room
+	room.roomMutex.Lock()
+	defer room.roomMutex.Unlock()
+	delete(room.userTrack, user.userID)
+
+	// Handling of 'user' as 'user'
+	user.userMutex.Lock()
+	defer user.userMutex.Unlock()
+	user.readBuf = nil
+	user.writeBuf = nil
+	user.conn.Close() // Delete net.Conn for 'user'
+	user.killUserConnection <- true
+
+}
+//----------------------------------------------------------------------------------------------
 func (user *UserInfo) Write() {
 	for {
 		select {
-			// case for Killing channel
+		case <-user.killUserConnection:
+			return
 		case output := <-user.outgoing:
-			user.writeBuf.Writer(output)
+			user.writeBuf.WriteString(output)
 			user.writeBuf.Flush()
 		}
 	}
 }
 //----------------------------------------------------------------------------------------------
-func (user *UserInfo) RemoveUser() {
-	
-}
-//----------------------------------------------------------------------------------------------
 func (user *UserInfo) Read() {
 	for {
 		select {
-			// case for killing channel
+		case <-user.killUserConnection:
+			return
 		default: //'default' is non-blocking so it executed if the 'select' isn't present
 			// Return 'line' and error_MSG. Reads until delimiter '\n'
-			input, er_read :=user.readBuf.ReadString('\n')
+			input, er_read := user.readBuf.ReadString('\n')
 			if er_read != nil {
-				if err == io.EOF {
-					glog.Info("User ", user.userID, "left the room")
+				if er_read == io.EOF {
+					glog.Info("User ", user.userID, " left the room")
 					user.RemoveUser()
 				} else {
 					glog.Errorln("Reading failed (User: ", user.userID, ")")
@@ -128,7 +149,7 @@ func (room *ServerRoom) Join(conn net.Conn) {
 	newuserID := room.userID + 1
 	room.userID = newuserID
 
-	user := NewUser(newuserID, conn)
+	user := NewUser(newuserID, room, conn)
 	user.Listen()
 
 	// Check to see if key exists ('_' would retrieve the value of the key)
@@ -140,7 +161,8 @@ func (room *ServerRoom) Join(conn net.Conn) {
 	go func() {
 		for {
 			select {
-				// TODO case for killing functions
+			case <-user.killUserConnection:
+				return
 			case input := <-user.incoming:
 				// Links to room.Listen() and then room.Broadcast()
 				room.incoming <- input
