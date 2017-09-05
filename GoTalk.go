@@ -11,41 +11,27 @@ import (
 //----------------------------------------------------------------------------------------------
 var (
 	CONN_PROT = "tcp"
-	cmd_CONN_HOST = flag.String("h", "127.0.0.1", "Host IP")
+	cmd_CONN_HOST = flag.String("ip", "127.0.0.1", "Host IP")
 	cmd_CONN_PORT = flag.String("p", "6666", "Host port")
 	cmd_USER_NAME = flag.String("n", "BodneyC", "Username")
 	quit = make(chan bool)
 )
 //----------------------------------------------------------------------------------------------
 type Client struct {
-	incoming chan string
 	outgoing chan string
-	readBuf *bufio.Reader
 	writeBuf *bufio.Reader
 	conn net.Conn
 }
 //----------------------------------------------------------------------------------------------
 func NewClient(conn net.Conn) *Client {
-	readBuf := bufio.NewReader(conn)
 	writeBuf := bufio.NewReader(os.Stdin)
 
 	client := &Client{
-		incoming: make(chan string),
 		outgoing: make(chan string),
-		readBuf: readBuf,
 		writeBuf: writeBuf,
 		conn: conn,
 	}
 	return client
-}
-//----------------------------------------------------------------------------------------------
-func (client *Client) Reader() {
-	for {
-		message, er_reader := client.readBuf.ReadString('\n')
-		if er_reader == nil {
-			client.incoming <- message
-		}
-	}
 }
 //----------------------------------------------------------------------------------------------
 func (client *Client) Writer() {
@@ -58,7 +44,6 @@ func (client *Client) Writer() {
 }
 //----------------------------------------------------------------------------------------------
 func (client *Client) IO() {
-	go client.Reader()
 	go client.Writer()
 }
 //----------------------------------------------------------------------------------------------
@@ -73,15 +58,12 @@ func main() {
 
 	client := NewClient(conn)
 	client.IO()
-	fmt.Print("<", *cmd_USER_NAME, "> ")
 
 	for {
+		fmt.Print("<", *cmd_USER_NAME, "> ")
 		select {
-		case message := <-client.incoming:
-			fmt.Print("\n" + message)
-			fmt.Print("<", *cmd_USER_NAME, "> ")
 		case message := <-client.outgoing:
-			fmt.Fprintf(conn, "<" + *cmd_USER_NAME + "> " + message)
+			fmt.Fprintf(conn,  "<" + *cmd_USER_NAME + "> " + message)
 		}
 	}
 }

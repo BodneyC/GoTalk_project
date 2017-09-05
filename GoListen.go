@@ -5,8 +5,8 @@ import (
 	"net"
 	"flag"
 	"bufio"
+	//"os"
 	"time"
-	"os"
 )
 //----------------------------------------------------------------------------------------------
 var (
@@ -19,21 +19,16 @@ var (
 //----------------------------------------------------------------------------------------------
 type Client struct {
 	incoming chan string
-	outgoing chan string
 	readBuf *bufio.Reader
-	writeBuf *bufio.Reader
 	conn net.Conn
 }
 //----------------------------------------------------------------------------------------------
 func NewClient(conn net.Conn) *Client {
 	readBuf := bufio.NewReader(conn)
-	writeBuf := bufio.NewReader(os.Stdin)
 
 	client := &Client{
 		incoming: make(chan string),
-		outgoing: make(chan string),
 		readBuf: readBuf,
-		writeBuf: writeBuf,
 		conn: conn,
 	}
 	return client
@@ -48,18 +43,8 @@ func (client *Client) Reader() {
 	}
 }
 //----------------------------------------------------------------------------------------------
-func (client *Client) Writer() {
-	for {
-		message, er_writer := client.writeBuf.ReadString('\n')
-		if er_writer == nil {
-			client.outgoing <- message
-		}
-	}
-}
-//----------------------------------------------------------------------------------------------
 func (client *Client) IO() {
 	go client.Reader()
-	go client.Writer()
 }
 //----------------------------------------------------------------------------------------------
 func main() {
@@ -68,20 +53,18 @@ func main() {
 	if er_dial != nil {
 		fmt.Println("Could not connect to ", *cmd_CONN_HOST, " via port ", *cmd_CONN_PORT, ".\nError: ", er_dial)
 		return
+	} else {
+		fmt.Println("Connected to ", *cmd_CONN_HOST, " via port ", *cmd_CONN_PORT, "\nStarted listeneing...")
 	}
 	defer conn.Close()
 
 	client := NewClient(conn)
 	client.IO()
-	fmt.Print("<", *cmd_USER_NAME, "> ")
 
 	for {
 		select {
 		case message := <-client.incoming:
-			fmt.Print("\n" + message)
-			fmt.Print("<", *cmd_USER_NAME, "> ")
-		case message := <-client.outgoing:
-			fmt.Fprintf(conn, "<" + *cmd_USER_NAME + "> " + message)
+			fmt.Print(message)
 		}
 	}
 }

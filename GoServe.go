@@ -89,7 +89,7 @@ func (user *UserInfo) Write() {
 		case <-user.killUserConnection:
 			return
 		case output := <-user.outgoing:
-			user.writeBuf.WriteString(temp)
+			user.writeBuf.WriteString(output)
 			user.writeBuf.Flush()
 		}
 	}
@@ -208,7 +208,7 @@ func main() {
 		listener.Close()
 	}()
 
-	fmt.Println("Please enter port number to listen on:")
+	fmt.Print("Please enter port number to listen on:")
 	fmt.Scan(&port)
 
 	listener, er_lis := net.Listen(CONN_PROT, CONN_HOST + ":" + strconv.Itoa(port))
