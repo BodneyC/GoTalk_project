@@ -22,6 +22,7 @@ import (
 	"bufio" //Read/Write buffers
 	"time"
 	"flag"
+	"strings"
 	"os" //os.Exit
 	"io" //io.EOF (For user killing)
 )
@@ -88,7 +89,7 @@ func (user *UserInfo) Write() {
 		case <-user.killUserConnection:
 			return
 		case output := <-user.outgoing:
-			user.writeBuf.WriteString(output)
+			user.writeBuf.WriteString(temp)
 			user.writeBuf.Flush()
 		}
 	}
@@ -183,7 +184,8 @@ func (room *ServerRoom) Listen() {
 		for {
 			select {
 			case input := <-room.incoming:
-				glog.Info("RECIEVED: " + input)
+				temp := strings.Replace(input, "\n", "", 1)
+				glog.Info("RECIEVED: " + temp)
 				room.Broadcast(input)
 			case connIn := <-room.entrance:
 				glog.Infoln("New connection to join")

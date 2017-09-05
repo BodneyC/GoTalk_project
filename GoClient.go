@@ -1,50 +1,3 @@
-// package main
-// //----------------------------------------------------------------------------------------------
-// import (
-// 	"fmt"
-// 	"net"
-// 	"flag"
-// 	"bufio"
-// 	"time"
-// 	"os"
-// )
-// //----------------------------------------------------------------------------------------------
-// var (
-// 	CONN_PROT = "tcp"
-// 	cmd_CONN_HOST = flag.String("h", "127.0.0.1", "Host IP")
-// 	cmd_CONN_PORT = flag.String("p", "6666", "Host port")
-// )
-// //----------------------------------------------------------------------------------------------
-// func main() {
-// 	conn, er_dial := net.DialTimeout(CONN_PROT, *cmd_CONN_HOST + ":" + *cmd_CONN_PORT, time.Second * 5)
-// 	if er_dial != nil {
-// 		fmt.Println("Could not connect to ", cmd_CONN_HOST, " via port ", cmd_CONN_PORT, ".\nError: ", er_dial)
-// 	}
-// 	defer conn.Close()
-//
-// 	for {
-// 		input, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-// 		message, _ := bufio.NewReader(conn).ReadString('\n')
-//
-// 		if input != nil {
-// 			// fmt.Print("Text to send: ")
-// 			// input, _ := readBuf.ReadString('\n')
-// 			conn.Write([]byte(input))
-// 		} else if message != nil {
-// 			conn.Read([]byte(message))
-// 			fmt.Println("MESSAGE IN: ", message)
-// 			// fmt.Println("Message from server: " + message)
-// 		} else {}
-// 	}
-// }
-// //----------------------------------------------------------------------------------------------
-// func init() {
-// 	flag.Parse()
-// }
-// //----------------------------------------------------------------------------------------------
-
-
-
 package main
 //----------------------------------------------------------------------------------------------
 import (
@@ -53,7 +6,6 @@ import (
 	"flag"
 	"bufio"
 	"time"
-	"sync"
 	"os"
 )
 //----------------------------------------------------------------------------------------------
@@ -61,6 +13,7 @@ var (
 	CONN_PROT = "tcp"
 	cmd_CONN_HOST = flag.String("h", "127.0.0.1", "Host IP")
 	cmd_CONN_PORT = flag.String("p", "6666", "Host port")
+	cmd_USER_NAME = flag.String("n", "BodneyC", "Username")
 	quit = make(chan bool)
 )
 //----------------------------------------------------------------------------------------------
@@ -70,7 +23,6 @@ type Client struct {
 	readBuf *bufio.Reader
 	writeBuf *bufio.Reader
 	conn net.Conn
-	clientMutex sync.Mutex
 }
 //----------------------------------------------------------------------------------------------
 func NewClient(conn net.Conn) *Client {
@@ -89,15 +41,19 @@ func NewClient(conn net.Conn) *Client {
 //----------------------------------------------------------------------------------------------
 func (client *Client) Reader() {
 	for {
-		message, _ := client.readBuf.ReadString('\n')
-		client.incoming <- message
+		message, er_reader := client.readBuf.ReadString('\n')
+		if er_reader == nil {
+			client.incoming <- message
+		}
 	}
 }
 //----------------------------------------------------------------------------------------------
 func (client *Client) Writer() {
 	for {
-		message, _ := client.writeBuf.ReadString('\n')
-		client.outgoing <- message
+		message, er_writer := client.writeBuf.ReadString('\n')
+		if er_writer == nil {
+			client.outgoing <- message
+		}
 	}
 }
 //----------------------------------------------------------------------------------------------
@@ -117,15 +73,15 @@ func main() {
 
 	client := NewClient(conn)
 	client.IO()
-	fmt.Print("MESSAGE OUT: ")
+	fmt.Print("<", *cmd_USER_NAME, "> ")
 
 	for {
 		select {
 		case message := <-client.incoming:
-			fmt.Println("\nMESSAGE IN: " + message)
-			fmt.Print("MESSAGE OUT: ")
+			fmt.Print("\n" + message)
+			fmt.Print("<", *cmd_USER_NAME, "> ")
 		case message := <-client.outgoing:
-			fmt.Fprintf(conn, message)
+			fmt.Fprintf(conn, "<" + *cmd_USER_NAME + "> " + message)
 		}
 	}
 }
