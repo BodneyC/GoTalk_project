@@ -3,17 +3,38 @@ GoTalk
 
 More than anything this is a project to get learning the fundamentals of GoLang. I was trying to think of something to make and came across the suggestion of a simple chat application. Having never made anything like it before I am basing it quite heavily off a couple of sources I found online, most notably [this project](https://github.com/coolspeed/century/blob/master/century.go).
 
-From some very light testing I seem to have it working
+From some very light testing I seem to have it working.
 
-## Install
+## Compile
+
+There is currently both a client and a server, each of which requires compilation.
 
 ```bash
+mkdir logs
 go build GoTalk.go
 ./GoTalk
+
+go build Goclient.go
+./GoClient <args>
 ```
 
 ## Usage
 
-- Provide it with a port
-- Connect (via localhost only as it stands) via (for example) telnet
-- Send and receive
+**Server**
+- Provide with a port
+- Connects via localhost only as it stands but no trouble to change that (TODO)
+- Logs messages received and user activity in logs/ via `glog`
+
+**Client**
+- Provide GoClient with an IP, port, and username via command line arguments
+- Send and receive messages
+
+```
+Usage of GoClient.exe:
+  -h string
+        Host IP (default "127.0.0.1")
+  -n string
+        Username (default "BodneyC")
+  -p string
+        Host port (default "6666")
+```
