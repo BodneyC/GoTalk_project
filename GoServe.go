@@ -14,7 +14,6 @@ INCOMING DATA FLOW:							OUTGOING DATA FLOW:
 package main // Executables must always be called 'main'
 //----------------------------------------------------------------------------------------------
 import (
-	"fmt"
 	"strconv"
 	"github.com/golang/glog"
 	"net"
@@ -31,9 +30,9 @@ var (
 	connections []net.Conn
 	listener net.Listener
 	room ServerRoom
-	port int
 	CONN_PROT = "tcp"
-	CONN_HOST = "localhost"
+	cmd_CONN_HOST = flag.String("ip", "127.0.0.1", "Host IP")
+	cmd_CONN_PORT = flag.String("p", "6666", "Host port")
 )
 //----------------------------------------------------------------------------------------------
 type UserInfo struct {
@@ -208,16 +207,13 @@ func main() {
 		listener.Close()
 	}()
 
-	fmt.Print("Please enter port number to listen on:")
-	fmt.Scan(&port)
-
-	listener, er_lis := net.Listen(CONN_PROT, CONN_HOST + ":" + strconv.Itoa(port))
+	listener, er_lis := net.Listen(CONN_PROT, *cmd_CONN_HOST + ":" + *cmd_CONN_PORT)
 
 	if er_lis != nil {
-		glog.Fatalf("Fatal error in listener init (Port: %s)", strconv.Itoa(port))
+		glog.Fatalf("Fatal error in listener init (Port: %s)", *cmd_CONN_PORT)
 		os.Exit(1)
 	} else {
-		glog.Info("Listener init (Port: ", strconv.Itoa(port), ")")
+		glog.Info("Listener init (Port:", *cmd_CONN_PORT, ")")
 	}
 
 	room := NewRoom()
@@ -244,7 +240,7 @@ func init() {
 	// Parse commandline arguments (needed for glog)
 	flag.Parse()
 	// Altering commandline arguments
-	flag.Lookup("log_dir").Value.Set(".\\logs")
+	flag.Lookup("log_dir").Value.Set("logs")
 	flag.Lookup("alsologtostderr").Value.Set("true")
 	//Potentially unneeded vv
 	connections = make([]net.Conn, 0, 10)

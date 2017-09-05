@@ -14,7 +14,6 @@ var (
 	cmd_CONN_HOST = flag.String("ip", "127.0.0.1", "Host IP")
 	cmd_CONN_PORT = flag.String("p", "6666", "Host port")
 	cmd_USER_NAME = flag.String("n", "BodneyC", "Username")
-	quit = make(chan bool)
 )
 //----------------------------------------------------------------------------------------------
 type Client struct {
