@@ -12,7 +12,7 @@ INCOMING DATA FLOW:							OUTGOING DATA FLOW:
 		user.writer.WriteString(data)
 ---------------------------------------------------------------------------------------------*/
 package main // Executables must always be called 'main'
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 import (
 	"strconv"
 	"github.com/golang/glog"
@@ -25,7 +25,7 @@ import (
 	"os" //os.Exit
 	"io" //io.EOF (For user killing)
 )
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 var (
 	connections []net.Conn
 	listener net.Listener
@@ -34,7 +34,7 @@ var (
 	cmd_CONN_HOST = flag.String("ip", "127.0.0.1", "Host IP")
 	cmd_CONN_PORT = flag.String("p", "6666", "Host port")
 )
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 type UserInfo struct {
 	room *ServerRoom
 	userID int
@@ -46,7 +46,7 @@ type UserInfo struct {
 	killUserConnection chan bool
 	userMutex sync.Mutex
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 func NewUser(id int, room *ServerRoom, conn net.Conn) *UserInfo{
 	readBuf := bufio.NewReader(conn)
 	writeBuf := bufio.NewWriter(conn)
@@ -64,7 +64,7 @@ func NewUser(id int, room *ServerRoom, conn net.Conn) *UserInfo{
 	glog.Infoln("User added, ID: ", id)
 	return newUser // Return to room.Join()
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 func (user *UserInfo) RemoveUser() {
 	// Handling of 'user' within 'room'
 	room := *user.room
@@ -81,7 +81,7 @@ func (user *UserInfo) RemoveUser() {
 	user.killUserConnection <- true
 	glog.Infoln("User", user.userID, "removed from room")
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 func (user *UserInfo) Write() {
 	for {
 		select {
@@ -93,7 +93,7 @@ func (user *UserInfo) Write() {
 		}
 	}
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 func (user *UserInfo) Read() {
 	for {
 		select {
@@ -116,12 +116,12 @@ func (user *UserInfo) Read() {
 		}
 	}
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 func (user *UserInfo) Listen() {
 	go user.Read()
 	go user.Write()
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 type ServerRoom struct {
 	userTrack map[int]*UserInfo // Map for delete() (tracking UserInfo objects)
 	userID int // Tracking users, and used as key for delete()^
@@ -130,7 +130,7 @@ type ServerRoom struct {
 	outgoing chan string
 	roomMutex sync.Mutex // For reserving use by a single GoRoutine per object
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 func NewRoom() *ServerRoom {
 	newroom := &ServerRoom{
 		userTrack: make(map[int]*UserInfo),
@@ -142,7 +142,7 @@ func NewRoom() *ServerRoom {
 	glog.Infoln("New room created")
 	return newroom
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 func (room *ServerRoom) Join(conn net.Conn) {
 	room.roomMutex.Lock()
 	defer room.roomMutex.Unlock()
@@ -171,13 +171,13 @@ func (room *ServerRoom) Join(conn net.Conn) {
 		}
 	} ()
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 func (room *ServerRoom) Broadcast(input string) {
 	for _, user := range room.userTrack {
 		user.outgoing <- input
 	}
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 func (room *ServerRoom) Listen() {
 	go func() {
 		for {
@@ -193,7 +193,7 @@ func (room *ServerRoom) Listen() {
 		}
 	} ()
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 func main() {
 	defer func() {
 		glog.Info("Closing listener safely")
@@ -234,7 +234,7 @@ func main() {
 		room.entrance <- connection
 	}
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 // init() is ran before main()
 func init() {
 	// Parse commandline arguments (needed for glog)
@@ -245,4 +245,4 @@ func init() {
 	//Potentially unneeded vv
 	connections = make([]net.Conn, 0, 10)
 }
-//----------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
